@@ -2,57 +2,50 @@ require 'open-uri'
 require 'nokogiri'
 require 'pry'
 
-# This is a class method takes in an argument of a student's profile URL
+
 class Scraper
 
-  # this method is responsible for scraping the index page that lists all of the students
   def self.scrape_index_page(index_url)
-    page = Nokogiri::HTML(open(index_url))
-    students = []
+    students_array = []
+    doc = Nokogiri::HTML(open(index_url))
+    student = doc.search(".student-card")
+    
+    student.each do |el|
+      name = el.search(".student-name").text
+      location = el.search(".student-location").text
+      profile_url = el.search("a").attribute("href").value
+      
+      student_hash = { 
+          
+            :name => name,
+            :location => location,
+            :profile_url => profile_url
+      }
+      students_array.push(student_hash)
+    end 
+    students_array
+  end 
 
-    page.css(".student-card").each do |student|
-      name = student.css(".student-name").text
-      location = student.css(".student-location").text
-      profile_url = student.css("a").attribute("href").value
-
-      student_info = {:name => name,
-                      :location => location,
-                      :profile_url => profile_url
-                    }
-
-      students << student_info
-      end
-      students
-  end
-
-  # This method is responsible for scraping an individual student's profile page
-  
   def self.scrape_profile_page(profile_url)
-    
-    page = Nokogiri::HTML(open(profile_url))
-    
-    student = {}
-
-    social_link = page.css(".social-icon-container a").collect do |icon|
-      icon.attribute("href").value
-    end
-
-    social_link.each do |link|
-      if link.include?("twitter")
-        student[:twitter] = link
-      elsif link.include?("linkedin")
-        student[:linkedin] = link
-      elsif link.include?("github")
-        student[:github] = link
-      elsif link.include?(".com")
-        student[:blog] = link
-      end
-    end
-      student[:profile_quote] = page.css(".profile-quote").text
-      student[:bio] = page.css("div.description-holder p").text
-      student
-    end
-end
-
-
-
+     students_hash = {}
+     doc = Nokogiri::HTML(open(profile_url))
+     links = doc.search(".social-icon-container a").map {|el| el.attribute("href").value}
+     
+     links.each do |el|
+      if el.include?("twitter")
+        students_hash[:twitter] = el
+      elsif el.include?("linkedin")
+        students_hash[:linkedin] = el
+      elsif el.include?("github")
+        students_hash[:github] = el
+      elsif el.include?(".com")
+        students_hash[:blog] = el
+      end 
+      
+     end 
+      students_hash[:profile_quote] = doc.search(".profile-quote").text
+      students_hash[:bio] = doc.search(".description-holder p").text
+      students_hash
+  end 
+  
+end 
